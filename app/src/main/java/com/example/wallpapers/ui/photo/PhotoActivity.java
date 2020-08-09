@@ -25,6 +25,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Base64;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -296,12 +297,26 @@ public class PhotoActivity extends AppCompatActivity {
         Picasso.get().load(url).into(new Target() {
             @Override
             public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
+                // get size
+                DisplayMetrics metrics = getResources().getDisplayMetrics();
+                int width = metrics.widthPixels;
+                int height = metrics.heightPixels;
+                int area = width * height / 1000;
+
+                width *= 2;
+                float scale = width / (float) bitmap.getWidth();
+                height = (int) (scale * bitmap.getHeight());
+
+                Bitmap bitmap1 = Bitmap.createScaledBitmap(bitmap, width, height, true);
+
                 WallpaperManager wallpaperManager = WallpaperManager.getInstance(PhotoActivity.this);
+                wallpaperManager.setWallpaperOffsetSteps(1, 1);
+                wallpaperManager.suggestDesiredDimensions(width, height);
+
                 try {
-                    wallpaperManager.setBitmap(bitmap);
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                    Toast.makeText(PhotoActivity.this, "Wallpaper", Toast.LENGTH_SHORT).show();
+                    wallpaperManager.setBitmap(bitmap1);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
                 Toast.makeText(PhotoActivity.this, "Wallpaper changed", Toast.LENGTH_SHORT).show();
             }
