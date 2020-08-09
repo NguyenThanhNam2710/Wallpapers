@@ -167,6 +167,8 @@ public class PhotoActivity extends AppCompatActivity {
                     Toast.makeText(PhotoActivity.this, "fab_shareImage:false", Toast.LENGTH_SHORT).show();
                     setFabShareImageLogin();
                 }
+
+                materialDesignFAM.close(true);
             }
         });
     }
