@@ -18,10 +18,10 @@ import android.content.pm.Signature;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Base64;
@@ -45,7 +45,6 @@ import com.facebook.GraphResponse;
 import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
 import com.facebook.login.widget.ProfilePictureView;
-import com.facebook.share.model.ShareLinkContent;
 import com.facebook.share.model.SharePhoto;
 import com.facebook.share.model.SharePhotoContent;
 import com.facebook.share.widget.ShareDialog;
@@ -74,24 +73,34 @@ public class PhotoActivity extends AppCompatActivity {
     AlertDialog dialog;
     private ImageView imgPhoto;
     private TextView tvPhotoViewP;
-    FloatingActionMenu materialDesignFAM;
+    FloatingActionMenu fabMenu;
     FloatingActionButton fabDownLoad, fabSetWallpaper, fabShareImage;
+
+    private FloatingActionMenu fabOptions;
+    private FloatingActionButton fabOptions3;
+    private FloatingActionButton fabOptions2;
+    private FloatingActionButton fabOptions1;
     String urlImage = "";
     String title = "";
 
-    private Bitmap result;
 
     CallbackManager callbackManager;
     String id, name, firstName, email;
 
     Animation fabOpen, fabClose, rotateForward, rotarteBackward;
-    boolean isOpen = false;
 
+    boolean isOpen = false;
+    private Bitmap result;
     SweetAlertDialog pDialog;
 
     private void init() {
 
-        materialDesignFAM = (FloatingActionMenu) findViewById(R.id.material_design_android_floating_action_menu);
+        fabOptions = (FloatingActionMenu) findViewById(R.id.fab_Options);
+        fabOptions3 = (FloatingActionButton) findViewById(R.id.fab_Options3);
+        fabOptions2 = (FloatingActionButton) findViewById(R.id.fab_Options2);
+        fabOptions1 = (FloatingActionButton) findViewById(R.id.fab_Options1);
+
+        fabMenu = (FloatingActionMenu) findViewById(R.id.material_design_android_floating_action_menu);
         fabSetWallpaper = (FloatingActionButton) findViewById(R.id.fabSetWallpaper);
         fabShareImage = (FloatingActionButton) findViewById(R.id.fabShareImage);
         fabDownLoad = (FloatingActionButton) findViewById(R.id.fabDownLoad);
@@ -114,7 +123,14 @@ public class PhotoActivity extends AppCompatActivity {
         constraintLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                materialDesignFAM.close(true);
+                if (fabOptions.isOpened()) {
+                    fabOptions.hideMenuButton(true);
+                    fabMenu.showMenuButton(true);
+                    fabMenu.open(true);
+                }
+                if (fabMenu.isOpened()) {
+                    fabMenu.close(true);
+                }
             }
         });
         init();
@@ -148,92 +164,82 @@ public class PhotoActivity extends AppCompatActivity {
         fabDownLoad.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 setFabDownLoad(urlImage);
-                materialDesignFAM.close(true);
+                fabMenu.close(true);
+                Toast.makeText(PhotoActivity.this, "no", Toast.LENGTH_SHORT).show();
             }
         });
+
         fabSetWallpaper.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                setFabSetWallpaper(urlImage);
-                materialDesignFAM.close(true);
+                animFloatingButton();
+                fabOptions.setMenuButtonLabelText("Set Wallpaper");
+                fabOptions1.setLabelText("Home Screen");
+                fabOptions1.setImageResource(R.drawable.ic_home_white_24dp);
+                fabOptions1.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Toast.makeText(PhotoActivity.this, "1", Toast.LENGTH_SHORT).show();
+                        setFabSetWallpaper(urlImage, WallpaperManager.FLAG_SYSTEM);
+                    }
+                });
+                fabOptions2.setLabelText("Lock Screen");
+                fabOptions2.setImageResource(R.drawable.ic_lock_white_24dp);
+                fabOptions2.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Toast.makeText(PhotoActivity.this, "2", Toast.LENGTH_SHORT).show();
+                        setFabSetWallpaper(urlImage, WallpaperManager.FLAG_LOCK);
+                    }
+                });
+                fabOptions3.setLabelText("Both");
+                fabOptions3.setImageResource(R.drawable.ic_baseline_phone_android_24);
+                fabOptions3.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        setFabSetWallpaper(urlImage, 0);
+                    }
+                });
 
             }
         });
+
+
         fabShareImage.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (isLoggedIn()) {
-                    Toast.makeText(PhotoActivity.this, "fab_shareImage: true", Toast.LENGTH_SHORT).show();
                     setFabShareImage();
 
                 } else {
-                    Toast.makeText(PhotoActivity.this, "fab_shareImage:false", Toast.LENGTH_SHORT).show();
                     setFabShareImageLogin();
                 }
 
-                materialDesignFAM.close(true);
+                fabMenu.close(true);
             }
         });
     }
 
-    public void hideAnimation() {
-        materialDesignFAM.close(true);
-    }
-
-    public boolean isLoggedIn() {
-        AccessToken accessToken = AccessToken.getCurrentAccessToken();
-        return accessToken != null;
-    }
-
-    private void setLoginButton(LoginButton loginButton, ProfilePictureView imgProfilePictureView) {
-        // Callback registration
-        loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
+    public void animFloatingButton() {
+        fabOptions.setVisibility(View.VISIBLE);
+        fabOptions.open(true);
+        if (fabMenu.isOpened()) {
+            fabMenu.hideMenuButton(true);
+            fabOptions.showMenuButton(true);
+        }
+        fabOptions.setOnMenuButtonClickListener(new View.OnClickListener() {
             @Override
-            public void onSuccess(LoginResult loginResult) {
-                loginButton.setVisibility(View.INVISIBLE);
-                GraphRequest graphRequest = GraphRequest.newMeRequest(AccessToken.getCurrentAccessToken(), new GraphRequest.GraphJSONObjectCallback() {
-                    @Override
-                    public void onCompleted(JSONObject object, GraphResponse response) {
-                        Log.e("JSON", response.getJSONObject().toString());
-                        try {
-                            email = object.getString("email");
-                            name = object.getString("name");
-                            firstName = object.getString("first_name");
-                            id = object.getString("id");
-                            //Profile.getCurrentProfile().getId()
-                            if (response.getJSONObject().toString() != "") {
-                                dialog.dismiss();
-                                imgProfilePictureView.setProfileId(id);
-                            }
-                            setFabShareImage();
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
-                Bundle parameters = new Bundle();
-                parameters.putString("fields", "id,name,email,first_name");
-                graphRequest.setParameters(parameters);
-                graphRequest.executeAsync();
-
-
-            }
-
-            @Override
-            public void onCancel() {
-                // App code
-            }
-
-            @Override
-            public void onError(FacebookException exception) {
-                // App code
+            public void onClick(View v) {
+                if (fabOptions.isOpened()) {
+                    fabOptions.hideMenuButton(true);
+                    fabMenu.showMenuButton(true);
+                    fabMenu.open(true);
+                    fabOptions.close(true);
+                } else {
+                    fabOptions.open(true);
+                }
             }
         });
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        callbackManager.onActivityResult(requestCode, resultCode, data);
-        super.onActivityResult(requestCode, resultCode, data);
-    }
 
     private void setFabDownLoad(String url) {
         if (ContextCompat.checkSelfPermission(PhotoActivity.this,
@@ -293,7 +299,7 @@ public class PhotoActivity extends AppCompatActivity {
 
     }
 
-    private void setFabSetWallpaper(String url) {
+    private void setFabSetWallpaper(String url, int resource) {
         Picasso.get().load(url).into(new Target() {
             @Override
             public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
@@ -314,11 +320,21 @@ public class PhotoActivity extends AppCompatActivity {
                 wallpaperManager.suggestDesiredDimensions(width, height);
 
                 try {
-                    wallpaperManager.setBitmap(bitmap1);
+                    if (resource != 0) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            wallpaperManager.setBitmap(bitmap1, null, true, resource);
+                        }
+                    } else {
+                        wallpaperManager.setBitmap(bitmap1);
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
                 Toast.makeText(PhotoActivity.this, "Wallpaper changed", Toast.LENGTH_SHORT).show();
+                fabMenu.showMenuButton(true);
+                fabMenu.open(true);
+                fabOptions.close(true);
+                fabOptions.hideMenuButton(true);
             }
 
             @Override
@@ -354,6 +370,57 @@ public class PhotoActivity extends AppCompatActivity {
         getBitmapFromURLAsync.execute(urlImage);
     }
 
+    public boolean isLoggedIn() {
+        AccessToken accessToken = AccessToken.getCurrentAccessToken();
+        return accessToken != null;
+    }
+
+    private void setLoginButton(LoginButton loginButton, ProfilePictureView imgProfilePictureView) {
+        // Callback registration
+        loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
+            @Override
+            public void onSuccess(LoginResult loginResult) {
+                loginButton.setVisibility(View.INVISIBLE);
+                GraphRequest graphRequest = GraphRequest.newMeRequest(AccessToken.getCurrentAccessToken(), new GraphRequest.GraphJSONObjectCallback() {
+                    @Override
+                    public void onCompleted(JSONObject object, GraphResponse response) {
+                        Log.e("JSON", response.getJSONObject().toString());
+                        try {
+                            email = object.getString("email");
+                            name = object.getString("name");
+                            firstName = object.getString("first_name");
+                            id = object.getString("id");
+                            //Profile.getCurrentProfile().getId()
+                            if (response.getJSONObject().toString() != "") {
+                                dialog.dismiss();
+                                imgProfilePictureView.setProfileId(id);
+                            }
+                            setFabShareImage();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                Bundle parameters = new Bundle();
+                parameters.putString("fields", "id,name,email,first_name");
+                graphRequest.setParameters(parameters);
+                graphRequest.executeAsync();
+
+
+            }
+
+            @Override
+            public void onCancel() {
+                // App code
+            }
+
+            @Override
+            public void onError(FacebookException exception) {
+                // App code
+            }
+        });
+    }
+
     private class GetBitmapFromURLAsync extends AsyncTask<String, Void, Bitmap> {
         @Override
         protected Bitmap doInBackground(String... params) {
@@ -386,5 +453,11 @@ public class PhotoActivity extends AppCompatActivity {
             e.printStackTrace();
             return null;
         }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        callbackManager.onActivityResult(requestCode, resultCode, data);
+        super.onActivityResult(requestCode, resultCode, data);
     }
 }
