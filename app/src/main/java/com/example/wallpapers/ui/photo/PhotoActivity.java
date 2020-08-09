@@ -1,5 +1,6 @@
 package com.example.wallpapers.ui.photo;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
@@ -16,6 +17,8 @@ import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -41,12 +44,19 @@ import com.facebook.GraphResponse;
 import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
 import com.facebook.login.widget.ProfilePictureView;
+import com.facebook.share.model.ShareLinkContent;
+import com.facebook.share.model.SharePhoto;
+import com.facebook.share.model.SharePhotoContent;
+import com.facebook.share.widget.ShareDialog;
 import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Target;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -56,9 +66,11 @@ import com.facebook.FacebookSdk;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import cn.pedant.SweetAlert.SweetAlertDialog;
+
 public class PhotoActivity extends AppCompatActivity {
 
-
+    AlertDialog dialog;
     private ImageView imgPhoto;
     private TextView tvPhotoViewP;
     FloatingActionMenu materialDesignFAM;
@@ -66,17 +78,17 @@ public class PhotoActivity extends AppCompatActivity {
     String urlImage = "";
     String title = "";
 
+    private Bitmap result;
 
-    private ProfilePictureView imgProfilePictureView;
-    private LoginButton loginButton;
     CallbackManager callbackManager;
     String id, name, firstName, email;
 
     Animation fabOpen, fabClose, rotateForward, rotarteBackward;
     boolean isOpen = false;
 
-    private void init() {
+    SweetAlertDialog pDialog;
 
+    private void init() {
 
         materialDesignFAM = (FloatingActionMenu) findViewById(R.id.material_design_android_floating_action_menu);
         fabSetWallpaper = (FloatingActionButton) findViewById(R.id.fabSetWallpaper);
@@ -89,9 +101,6 @@ public class PhotoActivity extends AppCompatActivity {
         fabClose = AnimationUtils.loadAnimation(this, R.anim.fab_close);
         rotateForward = AnimationUtils.loadAnimation(this, R.anim.rotate_forward);
         rotarteBackward = AnimationUtils.loadAnimation(this, R.anim.rotate_backward);
-
-        imgProfilePictureView = (ProfilePictureView) findViewById(R.id.imgProfilePictureView);
-        loginButton = (LoginButton) findViewById(R.id.login_button);
         callbackManager = CallbackManager.Factory.create();
     }
 
@@ -124,16 +133,13 @@ public class PhotoActivity extends AppCompatActivity {
 
         }
 
-        loginButton.setReadPermissions(Arrays.asList("public_profile", "email"));
-        // If you are using in a fragment, call loginButton.setFragment(this);
-        setLoginButton();
         Intent intent = getIntent();
         Bundle bundle = intent.getExtras();
         if (bundle != null) {
             urlImage = bundle.getString("urlM", "");
             title = bundle.getString("title", "Unknown");
         }
-        urlImage = "https://live.staticflickr.com/5211/5513402618_3ce232e01a.jpg";
+        //   urlImage = "https://live.staticflickr.com/5211/5513402618_3ce232e01a.jpg";
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         Picasso.get().load(urlImage).into(imgPhoto);
@@ -153,9 +159,14 @@ public class PhotoActivity extends AppCompatActivity {
         });
         fabShareImage.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Toast.makeText(PhotoActivity.this, "fab_shareImage", Toast.LENGTH_SHORT).show();
-                setFabShareImage();
-                materialDesignFAM.close(true);
+                if (isLoggedIn()) {
+                    Toast.makeText(PhotoActivity.this, "fab_shareImage: true", Toast.LENGTH_SHORT).show();
+                    setFabShareImage();
+
+                } else {
+                    Toast.makeText(PhotoActivity.this, "fab_shareImage:false", Toast.LENGTH_SHORT).show();
+                    setFabShareImageLogin();
+                }
             }
         });
     }
@@ -169,13 +180,38 @@ public class PhotoActivity extends AppCompatActivity {
         return accessToken != null;
     }
 
-    private void setLoginButton() {
+    private void setLoginButton(LoginButton loginButton, ProfilePictureView imgProfilePictureView) {
         // Callback registration
         loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(LoginResult loginResult) {
                 loginButton.setVisibility(View.INVISIBLE);
-                result();
+                GraphRequest graphRequest = GraphRequest.newMeRequest(AccessToken.getCurrentAccessToken(), new GraphRequest.GraphJSONObjectCallback() {
+                    @Override
+                    public void onCompleted(JSONObject object, GraphResponse response) {
+                        Log.e("JSON", response.getJSONObject().toString());
+                        try {
+                            email = object.getString("email");
+                            name = object.getString("name");
+                            firstName = object.getString("first_name");
+                            id = object.getString("id");
+                            //Profile.getCurrentProfile().getId()
+                            if (response.getJSONObject().toString() != "") {
+                                dialog.dismiss();
+                                imgProfilePictureView.setProfileId(id);
+                            }
+                            setFabShareImage();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                Bundle parameters = new Bundle();
+                parameters.putString("fields", "id,name,email,first_name");
+                graphRequest.setParameters(parameters);
+                graphRequest.executeAsync();
+
+
             }
 
             @Override
@@ -188,29 +224,6 @@ public class PhotoActivity extends AppCompatActivity {
                 // App code
             }
         });
-    }
-
-    private void result() {
-        GraphRequest graphRequest = GraphRequest.newMeRequest(AccessToken.getCurrentAccessToken(), new GraphRequest.GraphJSONObjectCallback() {
-            @Override
-            public void onCompleted(JSONObject object, GraphResponse response) {
-                Log.e("JSON", response.getJSONObject().toString());
-                try {
-                    email = object.getString("email");
-                    name = object.getString("name");
-                    firstName = object.getString("first_name");
-                    id = object.getString("id");
-                    //Profile.getCurrentProfile().getId()
-                    imgProfilePictureView.setProfileId(id);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        Bundle parameters = new Bundle();
-        parameters.putString("fields", "id,name,email,first_name");
-        graphRequest.setParameters(parameters);
-        graphRequest.executeAsync();
     }
 
     @Override
@@ -303,8 +316,58 @@ public class PhotoActivity extends AppCompatActivity {
         });
     }
 
+    private void setFabShareImageLogin() {
+        final AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
+        alertDialog.setView(R.layout.dialog_photo);
+        dialog = alertDialog.show();
+
+        ProfilePictureView imgProfilePictureView;
+        LoginButton loginButton;
+        imgProfilePictureView = (ProfilePictureView) dialog.findViewById(R.id.imgProfilePictureView);
+        loginButton = (LoginButton) dialog.findViewById(R.id.login_button);
+
+        loginButton.setReadPermissions(Arrays.asList("public_profile", "email"));
+
+        // If you are using in a fragment, call loginButton.setFragment(this);
+        setLoginButton(loginButton, imgProfilePictureView);
+    }
+
     private void setFabShareImage() {
+        GetBitmapFromURLAsync getBitmapFromURLAsync = new GetBitmapFromURLAsync();
+        getBitmapFromURLAsync.execute(urlImage);
+    }
 
+    private class GetBitmapFromURLAsync extends AsyncTask<String, Void, Bitmap> {
+        @Override
+        protected Bitmap doInBackground(String... params) {
+            return getBitmapFromURL(params[0]);
+        }
 
+        @Override
+        protected void onPostExecute(Bitmap bitmap) {
+            SharePhoto photo = new SharePhoto.Builder()
+                    .setBitmap(bitmap)
+                    .build();
+            SharePhotoContent content = new SharePhotoContent.Builder()
+                    .addPhoto(photo)
+                    .build();
+
+            ShareDialog.show(PhotoActivity.this, content);
+        }
+    }
+
+    public static Bitmap getBitmapFromURL(String src) {
+        try {
+            URL url = new URL(src);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setDoInput(true);
+            connection.connect();
+            InputStream input = connection.getInputStream();
+            Bitmap myBitmap = BitmapFactory.decodeStream(input);
+            return myBitmap;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

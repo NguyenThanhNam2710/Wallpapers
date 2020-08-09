@@ -1,6 +1,6 @@
 package com.example.wallpapers.ui.favorites;
 
-import android.app.ProgressDialog;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -33,16 +33,17 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
+import cn.pedant.SweetAlert.SweetAlertDialog;
+
 public class FavoriteFragment extends Fragment implements SwipeRefreshLayout.OnRefreshListener {
     private RecyclerView mRecyclerView;
     private ArrayList<Photo> mArrayList = new ArrayList<>();
     private SwipeRefreshLayout mSrlLayout;
-    private ProgressDialog mProgressDialog;
 
     PhotoAdapter mAdapter;
     StaggeredGridLayoutManager staggeredGridLayoutManager;
     int page = 1;
-
+    SweetAlertDialog mProgressDialog;
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_favorite, container, false);
@@ -50,7 +51,7 @@ public class FavoriteFragment extends Fragment implements SwipeRefreshLayout.OnR
         mSrlLayout = root.findViewById(R.id.srlLayout_favorites);
 
         mSrlLayout.setOnRefreshListener(this);
-        mProgressDialog = new ProgressDialog(getActivity());
+         mProgressDialog = new SweetAlertDialog(getActivity(), SweetAlertDialog.PROGRESS_TYPE);
         mAdapter = new PhotoAdapter(mArrayList, getActivity());
         staggeredGridLayoutManager = new StaggeredGridLayoutManager(2, LinearLayoutManager.VERTICAL);
         mRecyclerView.setLayoutManager(staggeredGridLayoutManager);
@@ -64,7 +65,8 @@ public class FavoriteFragment extends Fragment implements SwipeRefreshLayout.OnR
             @Override
             protected void onPostExecute(Object o) {
                 super.onPostExecute(o);
-                mProgressDialog.setMessage("Loading ...");
+                mProgressDialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
+                mProgressDialog.setTitleText("Loading");
                 mProgressDialog.setCancelable(false);
                 mProgressDialog.show();
             }
