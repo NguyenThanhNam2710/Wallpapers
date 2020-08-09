@@ -11,7 +11,9 @@ import android.app.ProgressDialog;
 import android.app.WallpaperManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.Signature;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
@@ -19,129 +21,202 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
-import android.view.LayoutInflater;
+import android.util.Base64;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.wallpapers.R;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.facebook.AccessToken;
+import com.facebook.CallbackManager;
+import com.facebook.FacebookCallback;
+import com.facebook.FacebookException;
+import com.facebook.GraphRequest;
+import com.facebook.GraphResponse;
+import com.facebook.login.LoginResult;
+import com.facebook.login.widget.LoginButton;
+import com.facebook.login.widget.ProfilePictureView;
+import com.github.clans.fab.FloatingActionButton;
+import com.github.clans.fab.FloatingActionMenu;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Target;
 
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+
+import com.facebook.FacebookSdk;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class PhotoActivity extends AppCompatActivity {
 
+
     private ImageView imgPhoto;
     private TextView tvPhotoViewP;
-    private FloatingActionButton fabResizeImage;
-    private FloatingActionButton fabSetWallpaper;
-    private FloatingActionButton fabDownLoad;
-    private FloatingActionButton fab;
-    private ProgressBar progressBar_P;
-    private String name;
-    String urlM = "";
+    FloatingActionMenu materialDesignFAM;
+    FloatingActionButton fabDownLoad, fabSetWallpaper, fabShareImage;
+    String urlImage = "";
     String title = "";
+
+
+    private ProfilePictureView imgProfilePictureView;
+    private LoginButton loginButton;
+    CallbackManager callbackManager;
+    String id, name, firstName, email;
 
     Animation fabOpen, fabClose, rotateForward, rotarteBackward;
     boolean isOpen = false;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_photo);
-        fab = findViewById(R.id.fab_P);
-        fabResizeImage = (FloatingActionButton) findViewById(R.id.fab_resizeImage);
-        fabSetWallpaper = (FloatingActionButton) findViewById(R.id.fab_setWallpaper);
-        fabDownLoad = (FloatingActionButton) findViewById(R.id.fab_downLoad);
+    private void init() {
+
+
+        materialDesignFAM = (FloatingActionMenu) findViewById(R.id.material_design_android_floating_action_menu);
+        fabSetWallpaper = (FloatingActionButton) findViewById(R.id.fabSetWallpaper);
+        fabShareImage = (FloatingActionButton) findViewById(R.id.fabShareImage);
+        fabDownLoad = (FloatingActionButton) findViewById(R.id.fabDownLoad);
 
         imgPhoto = (ImageView) findViewById(R.id.imgPhoto);
         tvPhotoViewP = (TextView) findViewById(R.id.tvPhoto_View_P);
-        progressBar_P = findViewById(R.id.progressBar_P);
         fabOpen = AnimationUtils.loadAnimation(this, R.anim.fab_open);
         fabClose = AnimationUtils.loadAnimation(this, R.anim.fab_close);
         rotateForward = AnimationUtils.loadAnimation(this, R.anim.rotate_forward);
         rotarteBackward = AnimationUtils.loadAnimation(this, R.anim.rotate_backward);
 
+        imgProfilePictureView = (ProfilePictureView) findViewById(R.id.imgProfilePictureView);
+        loginButton = (LoginButton) findViewById(R.id.login_button);
+        callbackManager = CallbackManager.Factory.create();
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        FacebookSdk.sdkInitialize(getApplicationContext());
+        setContentView(R.layout.activity_photo);
         ConstraintLayout constraintLayout = findViewById(R.id.ctlLayout_photo);
         constraintLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                animateFab();
+                materialDesignFAM.close(true);
             }
         });
+        init();
+
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(
+                    "com.example.wallpapers",                  //Insert your own package name.
+                    PackageManager.GET_SIGNATURES);
+            for (Signature signature : info.signatures) {
+                MessageDigest md = MessageDigest.getInstance("SHA");
+                md.update(signature.toByteArray());
+                Log.d("KeyHash:", Base64.encodeToString(md.digest(), Base64.DEFAULT));
+            }
+        } catch (PackageManager.NameNotFoundException e) {
+
+        } catch (NoSuchAlgorithmException e) {
+
+        }
+
+        loginButton.setReadPermissions(Arrays.asList("public_profile", "email"));
+        // If you are using in a fragment, call loginButton.setFragment(this);
+        setLoginButton();
         Intent intent = getIntent();
         Bundle bundle = intent.getExtras();
         if (bundle != null) {
-            urlM = bundle.getString("urlM", "");
+            urlImage = bundle.getString("urlM", "");
             title = bundle.getString("title", "Unknown");
-
-            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                    WindowManager.LayoutParams.FLAG_FULLSCREEN);
-            Picasso.get().load(urlM).into(imgPhoto);
-            tvPhotoViewP.setText(title);
         }
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                animateFab();
-            }
-        });
+        urlImage = "https://live.staticflickr.com/5211/5513402618_3ce232e01a.jpg";
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        Picasso.get().load(urlImage).into(imgPhoto);
+        tvPhotoViewP.setText(title);
         fabDownLoad.setOnClickListener(new View.OnClickListener() {
-            @Override
             public void onClick(View v) {
-                setFabDownLoad(urlM);
-                isOpen = true;
-                animateFab();
-
+                setFabDownLoad(urlImage);
+                materialDesignFAM.close(true);
             }
         });
         fabSetWallpaper.setOnClickListener(new View.OnClickListener() {
-            @Override
             public void onClick(View v) {
-                Toast.makeText(PhotoActivity.this, "fabSetWallpaper", Toast.LENGTH_SHORT).show();
-                setFabSetWallpaper(urlM);
-                isOpen = true;
-                animateFab();
+                setFabSetWallpaper(urlImage);
+                materialDesignFAM.close(true);
+
             }
         });
-        fabResizeImage.setOnClickListener(new View.OnClickListener() {
-            @Override
+        fabShareImage.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Toast.makeText(PhotoActivity.this, "fabResizeImage", Toast.LENGTH_SHORT).show();
+                Toast.makeText(PhotoActivity.this, "fab_shareImage", Toast.LENGTH_SHORT).show();
+                setFabShareImage();
+                materialDesignFAM.close(true);
             }
         });
     }
 
-    //sự kiện thay đổi animation
-    private void animateFab() {
-        if (isOpen) {
-            fab.startAnimation(rotarteBackward);
-            fabDownLoad.startAnimation(fabClose);
-            fabResizeImage.startAnimation(fabClose);
-            fabSetWallpaper.startAnimation(fabClose);
+    public void hideAnimation() {
+        materialDesignFAM.close(true);
+    }
 
-            fabSetWallpaper.setClickable(false);
-            fabResizeImage.setClickable(false);
-            fabSetWallpaper.setClickable(false);
-            isOpen = false;
-        } else {
-            fab.startAnimation(rotateForward);
-            fabDownLoad.startAnimation(fabOpen);
-            fabResizeImage.startAnimation(fabOpen);
-            fabSetWallpaper.startAnimation(fabOpen);
+    public boolean isLoggedIn() {
+        AccessToken accessToken = AccessToken.getCurrentAccessToken();
+        return accessToken != null;
+    }
 
-            fabSetWallpaper.setClickable(true);
-            fabResizeImage.setClickable(true);
-            fabSetWallpaper.setClickable(true);
-            isOpen = true;
-        }
+    private void setLoginButton() {
+        // Callback registration
+        loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
+            @Override
+            public void onSuccess(LoginResult loginResult) {
+                loginButton.setVisibility(View.INVISIBLE);
+                result();
+            }
+
+            @Override
+            public void onCancel() {
+                // App code
+            }
+
+            @Override
+            public void onError(FacebookException exception) {
+                // App code
+            }
+        });
+    }
+
+    private void result() {
+        GraphRequest graphRequest = GraphRequest.newMeRequest(AccessToken.getCurrentAccessToken(), new GraphRequest.GraphJSONObjectCallback() {
+            @Override
+            public void onCompleted(JSONObject object, GraphResponse response) {
+                Log.e("JSON", response.getJSONObject().toString());
+                try {
+                    email = object.getString("email");
+                    name = object.getString("name");
+                    firstName = object.getString("first_name");
+                    id = object.getString("id");
+                    //Profile.getCurrentProfile().getId()
+                    imgProfilePictureView.setProfileId(id);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        Bundle parameters = new Bundle();
+        parameters.putString("fields", "id,name,email,first_name");
+        graphRequest.setParameters(parameters);
+        graphRequest.executeAsync();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        callbackManager.onActivityResult(requestCode, resultCode, data);
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     private void setFabDownLoad(String url) {
@@ -228,4 +303,8 @@ public class PhotoActivity extends AppCompatActivity {
         });
     }
 
+    private void setFabShareImage() {
+
+
+    }
 }

@@ -28,13 +28,14 @@
         app:backgroundTint="#E63F51B5" />/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_resizeImage"
+        android:id="@+id/fab_shareImage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginRight="16dp"
         android:layout_marginBottom="96dp"
-        android:src="@android:drawable/stat_notify_sync"
+        android:src="@android:drawable/ic_menu_share"
         android:visibility="invisible"
         app:backgroundTint="#E63F51B5" />
+
 </FrameLayout>

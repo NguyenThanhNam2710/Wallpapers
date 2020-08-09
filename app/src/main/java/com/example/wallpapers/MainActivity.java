@@ -97,14 +97,6 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                if (newText == "") {
-                    mArrayList.clear();
-                    mAdapter.notifyDataSetChanged();
-                    mAdapter.notifyItemRangeRemoved(0, mArrayList.size());
-                    page = 1;
-                    getData_F(page);
-                    mSrlLayout.setRefreshing(false);
-                }
                 return true;
             }
         });

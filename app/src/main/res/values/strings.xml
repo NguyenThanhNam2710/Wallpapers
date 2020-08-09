@@ -11,4 +11,7 @@
     <string name="menu_gallery">Galleries</string>
     <string name="menu_photo">Photos</string>
     <string name="menu_log_out">Log Out</string>
+    <string name="facebook_app_id">646138212694208</string>
+    <string name="fb_login_protocol_scheme">fb646138212694208</string>
+
 </resources>
