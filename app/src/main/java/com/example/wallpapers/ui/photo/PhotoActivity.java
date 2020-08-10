@@ -156,16 +156,53 @@ public class PhotoActivity extends AppCompatActivity {
             urlImage = bundle.getString("urlM", "");
             title = bundle.getString("title", "Unknown");
         }
-        //   urlImage = "https://live.staticflickr.com/5211/5513402618_3ce232e01a.jpg";
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         Picasso.get().load(urlImage).into(imgPhoto);
         tvPhotoViewP.setText(title);
         fabDownLoad.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                setFabDownLoad(urlImage);
-                fabMenu.close(true);
-                Toast.makeText(PhotoActivity.this, "no", Toast.LENGTH_SHORT).show();
+                if (ContextCompat.checkSelfPermission(PhotoActivity.this,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    if (ActivityCompat.shouldShowRequestPermissionRationale(PhotoActivity.this,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                    } else {
+                        ActivityCompat.requestPermissions(PhotoActivity.this,
+                                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 100);
+                    }
+                } else {
+                    animFloatingButton();
+                    fabOptions.setMenuButtonLabelText("Download");
+                    fabOptions1.setLabelText("281x500");
+                    fabOptions1.setImageResource(R.drawable.ic_download);
+                    fabOptions1.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            setFabDownLoad(urlImage);
+                            fabOptions.close(true);
+                            fabMenu.hideMenuButton(true);
+                            fabMenu.close(true);
+                        }
+                    });
+                    fabOptions2.setLabelText("576x1024");
+                    fabOptions2.setImageResource(R.drawable.ic_download);
+                    fabOptions2.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            Toast.makeText(PhotoActivity.this, "576x1024", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                    fabOptions3.setLabelText("1080x1920");
+                    fabOptions3.setImageResource(R.drawable.ic_download);
+                    fabOptions3.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            Toast.makeText(PhotoActivity.this, "1080x1920", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+
             }
         });
 
@@ -178,7 +215,6 @@ public class PhotoActivity extends AppCompatActivity {
                 fabOptions1.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        Toast.makeText(PhotoActivity.this, "1", Toast.LENGTH_SHORT).show();
                         setFabSetWallpaper(urlImage, WallpaperManager.FLAG_SYSTEM);
                     }
                 });
@@ -187,7 +223,6 @@ public class PhotoActivity extends AppCompatActivity {
                 fabOptions2.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        Toast.makeText(PhotoActivity.this, "2", Toast.LENGTH_SHORT).show();
                         setFabSetWallpaper(urlImage, WallpaperManager.FLAG_LOCK);
                     }
                 });
@@ -203,17 +238,46 @@ public class PhotoActivity extends AppCompatActivity {
             }
         });
 
-
         fabShareImage.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                if (isLoggedIn()) {
-                    setFabShareImage();
+                animFloatingButton();
+                fabOptions.setMenuButtonLabelText("Share");
+                fabOptions1.setLabelText("Facebook");
+                fabOptions1.setImageResource(R.drawable.com_facebook_button_icon);
+                fabOptions1.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if (isLoggedIn()) {
+                            setFabShareImage();
 
-                } else {
-                    setFabShareImageLogin();
-                }
+                        } else {
+                            setFabShareImageLogin();
+                        }
 
-                fabMenu.close(true);
+                        fabMenu.close(true);
+                    }
+                });
+
+                fabOptions2.hide(true);
+                fabOptions3.hide(true);
+                fabOptions2.setVisibility(View.GONE);
+                fabOptions3.setVisibility(View.GONE);
+//                fabOptions2.setLabelText("Instagram");
+//                fabOptions2.setImageResource(R.drawable.icon_instagram);
+//                fabOptions2.setOnClickListener(new View.OnClickListener() {
+//                    @Override
+//                    public void onClick(View v) {
+//                        Toast.makeText(PhotoActivity.this, "Instagram", Toast.LENGTH_SHORT).show();
+//                    }
+//                });
+//                fabOptions3.setLabelText("Twitter");
+//                fabOptions3.setImageResource(R.drawable.icon_twitter);
+//                fabOptions3.setOnClickListener(new View.OnClickListener() {
+//                    @Override
+//                    public void onClick(View v) {
+//                        Toast.makeText(PhotoActivity.this, "Twitter", Toast.LENGTH_SHORT).show();
+//                    }
+//                });
             }
         });
     }
@@ -240,62 +304,51 @@ public class PhotoActivity extends AppCompatActivity {
         });
     }
 
-
     private void setFabDownLoad(String url) {
-        if (ContextCompat.checkSelfPermission(PhotoActivity.this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(PhotoActivity.this,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-            } else {
-                ActivityCompat.requestPermissions(PhotoActivity.this,
-                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 100);
+        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+        String image_name = title + "/" + System.currentTimeMillis();
+        request.setTitle("Image: " + image_name);
+        request.allowScanningByMediaScanner();
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, image_name);
+
+        final DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+        final long downloadId = manager.enqueue(request);
+        final ProgressDialog dl = new ProgressDialog(PhotoActivity.this);
+        AsyncTask asyncTask = new AsyncTask() {
+            boolean downloading = true;
+
+            @Override
+            protected Object doInBackground(Object[] objects) {
+                DownloadManager.Query q = new DownloadManager.Query();
+                q.setFilterById(downloadId);
+                Cursor cursor = manager.query(q);
+                cursor.moveToFirst();
+                if (cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)) == DownloadManager.STATUS_SUCCESSFUL) {
+                    downloading = false;
+                }
+
+                cursor.close();
+                return null;
             }
-        } else {
-            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-            String image_name = title + "/" + System.currentTimeMillis();
-            request.setTitle("Image: " + image_name);
-            request.allowScanningByMediaScanner();
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, image_name);
 
-            final DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-            final long downloadId = manager.enqueue(request);
-            final ProgressDialog dl = new ProgressDialog(PhotoActivity.this);
-            AsyncTask asyncTask = new AsyncTask() {
-                boolean downloading = true;
+            @Override
+            protected void onPostExecute(Object o) {
+                super.onPostExecute(o);
+                Toast.makeText(getApplicationContext(), "Image download is successful", Toast.LENGTH_SHORT).show();
+                dl.dismiss();
 
-                @Override
-                protected Object doInBackground(Object[] objects) {
-                    DownloadManager.Query q = new DownloadManager.Query();
-                    q.setFilterById(downloadId);
-                    Cursor cursor = manager.query(q);
-                    cursor.moveToFirst();
-                    if (cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)) == DownloadManager.STATUS_SUCCESSFUL) {
-                        downloading = false;
-                    }
+            }
 
-                    cursor.close();
-                    return null;
-                }
+            @Override
+            protected void onPreExecute() {
+                super.onPreExecute();
+                dl.show();
+                dl.setMessage("Image is being downloaded...");
+            }
+        };
+        asyncTask.execute();
 
-                @Override
-                protected void onPostExecute(Object o) {
-                    super.onPostExecute(o);
-                    Toast.makeText(getApplicationContext(), "Image download is successful", Toast.LENGTH_SHORT).show();
-                    dl.dismiss();
-
-                }
-
-                @Override
-                protected void onPreExecute() {
-                    super.onPreExecute();
-                    dl.show();
-                    dl.setMessage("Image is being downloaded...");
-                }
-            };
-            asyncTask.execute();
-        }
 
     }
 
@@ -312,7 +365,6 @@ public class PhotoActivity extends AppCompatActivity {
                 width *= 2;
                 float scale = width / (float) bitmap.getWidth();
                 height = (int) (scale * bitmap.getHeight());
-
                 Bitmap bitmap1 = Bitmap.createScaledBitmap(bitmap, width, height, true);
 
                 WallpaperManager wallpaperManager = WallpaperManager.getInstance(PhotoActivity.this);
@@ -375,7 +427,8 @@ public class PhotoActivity extends AppCompatActivity {
         return accessToken != null;
     }
 
-    private void setLoginButton(LoginButton loginButton, ProfilePictureView imgProfilePictureView) {
+    private void setLoginButton(LoginButton loginButton, ProfilePictureView
+            imgProfilePictureView) {
         // Callback registration
         loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
             @Override

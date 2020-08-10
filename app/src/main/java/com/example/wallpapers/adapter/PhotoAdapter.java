@@ -1,5 +1,6 @@
 package com.example.wallpapers.adapter;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -15,6 +16,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.wallpapers.R;
@@ -27,6 +29,7 @@ import java.util.List;
 
 public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> implements Filterable {
     private List<Photo> listData;
+    private List<Photo> listDataNew;
     private Context context;
 
     public PhotoAdapter(List<Photo> listData, Context context) {
@@ -41,10 +44,6 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
                 .inflate(R.layout.photo_listview, parent, false);
 
         ViewHolder vh = new ViewHolder(view);
-//
-//        for (int i = 0; i < listData.size(); i++) {
-//            Log.e("image[" + i + "]", listData.get(i).getUrlM());
-//        }
         return vh;
     }
 
@@ -53,18 +52,22 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         final Photo item = listData.get(position);
         Picasso.get().load(item.getUrlM()).into(holder.imageView);
         holder.tvPhoto_View.setText(item.getViews());
+        String finalUrl = item.getUrlM();
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Log.e("id_image ", item.getId());
                 Intent intent = new Intent(context, PhotoActivity.class);
                 Bundle bundle = new Bundle();
-                bundle.putString("urlM", item.getUrlM());
+                bundle.putString("urlM", finalUrl);
                 bundle.putString("title", item.getTitle());
                 intent.putExtras(bundle);
                 context.startActivity(intent);
+                ((Activity) context).overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
             }
         });
+
+
     }
 
     @Override

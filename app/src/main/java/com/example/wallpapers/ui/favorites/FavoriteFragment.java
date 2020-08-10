@@ -44,6 +44,7 @@ public class FavoriteFragment extends Fragment implements SwipeRefreshLayout.OnR
     StaggeredGridLayoutManager staggeredGridLayoutManager;
     int page = 1;
     SweetAlertDialog mProgressDialog;
+
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_favorite, container, false);
@@ -51,7 +52,7 @@ public class FavoriteFragment extends Fragment implements SwipeRefreshLayout.OnR
         mSrlLayout = root.findViewById(R.id.srlLayout_favorites);
 
         mSrlLayout.setOnRefreshListener(this);
-         mProgressDialog = new SweetAlertDialog(getActivity(), SweetAlertDialog.PROGRESS_TYPE);
+        mProgressDialog = new SweetAlertDialog(getActivity(), SweetAlertDialog.PROGRESS_TYPE);
         mAdapter = new PhotoAdapter(mArrayList, getActivity());
         staggeredGridLayoutManager = new StaggeredGridLayoutManager(2, LinearLayoutManager.VERTICAL);
         mRecyclerView.setLayoutManager(staggeredGridLayoutManager);
