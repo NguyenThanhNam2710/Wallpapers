@@ -31,11 +31,19 @@ import android.view.View;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.androidnetworking.AndroidNetworking;
+import com.androidnetworking.error.ANError;
+import com.androidnetworking.interfaces.JSONObjectRequestListener;
+import com.example.wallpapers.BottomSheet;
 import com.example.wallpapers.R;
+import com.example.wallpapers.model.Photo;
+import com.example.wallpapers.model.Photos;
 import com.facebook.AccessToken;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
@@ -50,6 +58,8 @@ import com.facebook.share.model.SharePhotoContent;
 import com.facebook.share.widget.ShareDialog;
 import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Target;
 
@@ -59,10 +69,12 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import com.facebook.FacebookSdk;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -82,19 +94,30 @@ public class PhotoActivity extends AppCompatActivity {
     private FloatingActionButton fabOptions1;
     String urlImage = "";
     String title = "";
+    String photoID = "";
+
+    private LinearLayout btnView;
+    private TextView tvView;
+    private LinearLayout btnComment;
+    private TextView tvComment;
 
 
     CallbackManager callbackManager;
-    String id, name, firstName, email;
+    String id, name, firstName, email, views;
+    int comments;
 
     Animation fabOpen, fabClose, rotateForward, rotarteBackward;
-
+    Button btnGetComment;
     boolean isOpen = false;
     private Bitmap result;
     SweetAlertDialog pDialog;
 
     private void init() {
 
+        btnView = (LinearLayout) findViewById(R.id.btnView);
+        tvView = (TextView) findViewById(R.id.tvView);
+        btnComment = (LinearLayout) findViewById(R.id.btnComment);
+        tvComment = (TextView) findViewById(R.id.tvComment);
         fabOptions = (FloatingActionMenu) findViewById(R.id.fab_Options);
         fabOptions3 = (FloatingActionButton) findViewById(R.id.fab_Options3);
         fabOptions2 = (FloatingActionButton) findViewById(R.id.fab_Options2);
@@ -152,14 +175,28 @@ public class PhotoActivity extends AppCompatActivity {
 
         Intent intent = getIntent();
         Bundle bundle = intent.getExtras();
+        String meida = "";
         if (bundle != null) {
-            urlImage = bundle.getString("urlM", "");
+            urlImage = bundle.getString("urlM", "Unknown");
             title = bundle.getString("title", "Unknown");
+            photoID = bundle.getString("photoID", "Unknown");
+            views = bundle.getString("views", "Unknown");
+            comments = bundle.getInt("comments", -1);
+            meida = bundle.getString("media", "Unknown");
         }
+        tvPhotoViewP.setText(meida + " : " + title);
+        tvView.setText(views);
+        tvComment.setText(comments + "");
+        btnComment.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                BottomSheet bottomSheet = new BottomSheet(photoID, PhotoActivity.this);
+                bottomSheet.show(getSupportFragmentManager(), "TAG");
+            }
+        });
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         Picasso.get().load(urlImage).into(imgPhoto);
-        tvPhotoViewP.setText(title);
         fabDownLoad.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (ContextCompat.checkSelfPermission(PhotoActivity.this,
@@ -180,9 +217,6 @@ public class PhotoActivity extends AppCompatActivity {
                         @Override
                         public void onClick(View v) {
                             setFabDownLoad(urlImage);
-                            fabOptions.close(true);
-                            fabMenu.hideMenuButton(true);
-                            fabMenu.close(true);
                         }
                     });
                     fabOptions2.setLabelText("576x1024");
@@ -337,7 +371,8 @@ public class PhotoActivity extends AppCompatActivity {
                 super.onPostExecute(o);
                 Toast.makeText(getApplicationContext(), "Image download is successful", Toast.LENGTH_SHORT).show();
                 dl.dismiss();
-
+                fabOptions.hideMenuButton(true);
+                fabMenu.showMenuButton(true);
             }
 
             @Override
@@ -384,7 +419,6 @@ public class PhotoActivity extends AppCompatActivity {
                 }
                 Toast.makeText(PhotoActivity.this, "Wallpaper changed", Toast.LENGTH_SHORT).show();
                 fabMenu.showMenuButton(true);
-                fabMenu.open(true);
                 fabOptions.close(true);
                 fabOptions.hideMenuButton(true);
             }
@@ -513,4 +547,5 @@ public class PhotoActivity extends AppCompatActivity {
         callbackManager.onActivityResult(requestCode, resultCode, data);
         super.onActivityResult(requestCode, resultCode, data);
     }
+
 }

@@ -17,12 +17,17 @@ import com.androidnetworking.interfaces.JSONObjectRequestListener;
 import com.example.wallpapers.adapter.PhotoAdapter;
 import com.example.wallpapers.loadmore.EndlessRecyclerViewScrollListener;
 import com.example.wallpapers.model.Photo;
+import com.example.wallpapers.ui.favorites.FavoriteFragment;
+import com.example.wallpapers.ui.galleries.GalleriesFragment;
+import com.example.wallpapers.ui.slideshow.SlideshowFragment;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.navigation.NavigationView;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -78,6 +83,19 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
         NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
         NavigationUI.setupWithNavController(navigationView, navController);
+
+//        FavoriteFragment favoriteFragment =  getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment);
+//        GalleriesFragment galleriesFragment = (GalleriesFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment);
+//        SlideshowFragment slideshowFragment = (SlideshowFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment);
+        int fragment = new FavoriteFragment().getId();
+        int fragment1 = new GalleriesFragment().getId();
+        int fragment2 = new SlideshowFragment().getId();
+        Fragment fragmentManager = getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment);
+        Log.e("FavoriteFragment: ", fragment + fragment1 + fragment2+"");
+        Log.e("fragmentManager: ", fragmentManager.getId() + "");
+//        if (fragmentManager.getId() == galleriesFragment.getId()) {
+//            toolbar.setVisibility(View.GONE);
+//        }
     }
 
     SearchView searchView;
@@ -88,6 +106,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         getMenuInflater().inflate(R.menu.main, menu);
         MenuItem menuItem = menu.findItem(R.id.app_bar_search);
         searchView = (SearchView) menuItem.getActionView();
+
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {

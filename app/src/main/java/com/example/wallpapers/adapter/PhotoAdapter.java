@@ -17,19 +17,29 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.constraintlayout.widget.ConstraintSet;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.androidnetworking.AndroidNetworking;
+import com.androidnetworking.error.ANError;
+import com.androidnetworking.interfaces.JSONObjectRequestListener;
 import com.example.wallpapers.R;
+import com.example.wallpapers.model.Comment_;
 import com.example.wallpapers.model.Photo;
 import com.example.wallpapers.ui.photo.PhotoActivity;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.squareup.picasso.Picasso;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> implements Filterable {
     private List<Photo> listData;
-    private List<Photo> listDataNew;
     private Context context;
 
     public PhotoAdapter(List<Photo> listData, Context context) {
@@ -47,22 +57,59 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         return vh;
     }
 
+    ArrayList<Comment_> mArrayList = new ArrayList<>();
+    int size = -1;
+
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         final Photo item = listData.get(position);
         Picasso.get().load(item.getUrlM()).into(holder.imageView);
         holder.tvPhoto_View.setText(item.getViews());
         String finalUrl = item.getUrlM();
+
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Log.e("id_image ", item.getId());
-                Intent intent = new Intent(context, PhotoActivity.class);
-                Bundle bundle = new Bundle();
-                bundle.putString("urlM", finalUrl);
-                bundle.putString("title", item.getTitle());
-                intent.putExtras(bundle);
-                context.startActivity(intent);
+                AndroidNetworking.post("https://www.flickr.com/services/rest")
+                        .addBodyParameter("api_key", "71e2a9a70ac5d577d67e353e03938a96")
+                        .addBodyParameter("photo_id", item.getId())
+                        .addBodyParameter("format", "json")
+                        .addBodyParameter("method", "flickr.photos.comments.getList")
+                        .addBodyParameter("nojsoncallback", "1").build()
+                        .getAsJSONObject(new JSONObjectRequestListener() {
+                            @Override
+                            public void onResponse(JSONObject response) {
+                                try {
+                                    JSONObject comments = response.getJSONObject("comments");
+                                    Log.e("comments", comments.toString() + "");
+                                    JSONArray comment = comments.getJSONArray("comment");
+                                    Log.e("comment", comment.toString() + "");
+                                    mArrayList.addAll(new Gson().fromJson(comment.toString(), new TypeToken<ArrayList<Comment_>>() {
+                                    }.getType()));
+                                    Log.e("mArrayList", mArrayList.size() + "");
+                                    size = mArrayList.size();
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                } finally {
+                                    Intent intent = new Intent(context, PhotoActivity.class);
+                                    Bundle bundle = new Bundle();
+                                    bundle.putString("photoID", item.getId());
+                                    bundle.putString("urlM", finalUrl);
+                                    bundle.putString("title", item.getTitle());
+                                    bundle.putString("views", item.getViews());
+                                    bundle.putString("media", item.getMedia());
+                                    bundle.putInt("comments", size);
+                                    intent.putExtras(bundle);
+                                    context.startActivity(intent);
+                                }
+                            }
+
+                            @Override
+                            public void onError(ANError anError) {
+                                Log.e("onError_FF", anError.getErrorBody());
+                            }
+                        });
                 ((Activity) context).overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
             }
         });

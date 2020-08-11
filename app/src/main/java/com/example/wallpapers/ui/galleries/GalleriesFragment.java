@@ -39,9 +39,9 @@ import java.util.ArrayList;
 public class GalleriesFragment extends Fragment implements SwipeRefreshLayout.OnRefreshListener {
     private RecyclerView mRecyclerView;
     private SwipeRefreshLayout mSrlLayout;
-    private ArrayList<Gallery> mArrayList = new ArrayList<>();
     private ProgressDialog mProgressDialog;
 
+    private ArrayList<Gallery> mArrayList = new ArrayList<>();
     GalleryAdapter mAdapter;
     StaggeredGridLayoutManager staggeredGridLayoutManager;
     int page = 1;
